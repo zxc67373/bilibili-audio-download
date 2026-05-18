@@ -12,6 +12,7 @@
 - 📂 已下载文件管理（查看、播放、下载、删除）
 - 🎧 在线播放器，支持上一首/下一首
 - 📋 歌单功能，创建和管理播放列表
+- 🖼️ 封面图片自动压缩，优化加载速度
 
 ## 环境要求
 
@@ -36,11 +37,11 @@ choco install ffmpeg
 ### 2. 克隆项目
 
 ```bash
-git clone https://github.com/你的用户名/bilibili-audio-downloader.git
+git clone https://github.com/zxc67373/bilibili-audio-downloader.git
 cd bilibili-audio-downloader
 ```
 
-### 3. 创建虚拟环境（推荐）
+### 3. 创建虚拟环境（��荐）
 
 ```bash
 python -m venv venv
@@ -57,6 +58,8 @@ pip install -r requirements.txt
 
 ## 启动服务
 
+### 本地运行
+
 ```bash
 cd app
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -64,11 +67,48 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 启动后，在浏览器中访问：`http://localhost:8000`
 
+### 生产环境部署（推荐使用 Nginx 反向代理）
+
+1. 安装 Nginx
+2. 配置反向代理（参考 `nginx.conf.example`）
+3. 使用 Systemd 或 supervisor 管理进程
+
+示例 Nginx 配置：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        root /var/www/html;
+        try_files $uri $uri/ =404;
+    }
+
+    # API 代理
+    location /files {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+    }
+
+    location /download {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+    }
+
+    # Web 应用
+    location /music/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_set_header X-Forwarded-Prefix /music;
+    }
+}
+```
+
 ## 使用方法
 
 ### 下载音频
 
-1. 打开浏览器访问 `http://localhost:8000`
+1. ��开浏览器访问 `http://localhost:8000`（或配置的域名）
 2. 在输入框中粘贴 Bilibili 视频链接
 3. 点击"开始下载"按钮
 4. 等待下载完成，点击下载链接获取音频文件
@@ -115,10 +155,10 @@ bilibili-audio-downloader/
 │       ├── app.js        # 前端交互脚本
 │       └── preview-style.css
 ├── downloads/            # 音频输出目录（不会被提交）
+├── covers/               # 封面图片目录
 ├── logs/                 # 日志目录（不会被提交）
 ├── requirements.txt      # Python 依赖
-├── test.py              # 命令行测试脚本
-└── README.md            # 项目文档
+└── README.md             # 项目文档
 ```
 
 ## API 接口
@@ -145,6 +185,7 @@ bilibili-audio-downloader/
 - **前端**: 原生 HTML + CSS + JavaScript
 - **下载**: yt-dlp
 - **音频转换**: FFmpeg
+- **图片处���**: Pillow
 
 ## 注意事项
 

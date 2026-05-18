@@ -197,24 +197,44 @@ class Downloader:
             if thumbnail_url:
                 try:
                     import urllib.request
-                    # 保存到 covers 文件夹
+                    from PIL import Image
+
+                    # 先下载到临时文件
+                    temp_thumbnail = self.covers_dir / f"{title}_cover_temp.jpg"
                     thumbnail_path = self.covers_dir / f"{title}_cover.jpg"
                     logger.info(f"[{task_id}] 开始下载封面...")
                     logger.info(f"[{task_id}] 封面保存路径: {thumbnail_path}")
-                    urllib.request.urlretrieve(thumbnail_url, str(thumbnail_path))
-                    if thumbnail_path.exists():
-                        file_size = thumbnail_path.stat().st_size
-                        logger.info(f"[{task_id}] ✅ 封面下载成功!")
-                        logger.info(f"[{task_id}] 封面文件名: {thumbnail_path.name}")
-                        logger.info(f"[{task_id}] 封面大小: {file_size} bytes ({file_size / 1024:.1f} KB)")
+                    urllib.request.urlretrieve(thumbnail_url, str(temp_thumbnail))
+
+                    # 压缩封面图片
+                    if temp_thumbnail.exists():
+                        try:
+                            with Image.open(temp_thumbnail) as img:
+                                # 转换为 RGB 模式（处理 PNG 透明通道）
+                                if img.mode in ('RGBA', 'P'):
+                                    img = img.convert('RGB')
+                                # 缩放到合理大小（列表展示用 300x300 足够）
+                                img.thumbnail((300, 300), Image.Resampling.LANCZOS)
+                                # 保存为压缩后的 JPEG（质量 80%）
+                                img.save(thumbnail_path, 'JPEG', quality=80, optimize=True)
+                            # 删除临时文件
+                            temp_thumbnail.unlink()
+                            file_size = thumbnail_path.stat().st_size
+                            logger.info(f"[{task_id}] ✅ 封面下载并压缩成功!")
+                            logger.info(f"[{task_id}] 封面文件名: {thumbnail_path.name}")
+                            logger.info(f"[{task_id}] 封面大小: {file_size} bytes ({file_size / 1024:.1f} KB)")
+                        except Exception as e:
+                            logger.warning(f"[{task_id}] 封面压缩失败，使用原图: {e}")
+                            # 压缩失败时使用原图
+                            if thumbnail_path.exists():
+                                thumbnail_path.unlink()
+                            temp_thumbnail.rename(thumbnail_path)
+                            if thumbnail_path.exists():
+                                file_size = thumbnail_path.stat().st_size
+                                logger.info(f"[{task_id}] 封面大小: {file_size} bytes ({file_size / 1024:.1f} KB)")
                     else:
                         logger.warning(f"[{task_id}] ⚠️ 封面文件未找到: {thumbnail_path}")
                     task_manager.update_task(task_id, message="正在添加封面...")
-                except Exception as e:
-                    logger.error(f"[{task_id}] ❌ 封面下载失败: {e}")
-                    thumbnail_path = None
-            else:
-                logger.warning(f"[{task_id}] ⚠️ 视频无封面")
 
             # 使用 FFmpeg 转换为 MP3（不再嵌入封面，封面单独保存在 covers 目录）
             logger.info(f"[{task_id}] ========== 开始转换MP3 ==========")

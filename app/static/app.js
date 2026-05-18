@@ -323,7 +323,7 @@ function renderFilesList() {
                 </div>
                 <div class="file-actions">
                     <a href="/download/${encodeURIComponent(file.name)}" download>下载</a>
-                    <button onclick="event.stopPropagation(); deleteFile('${escapeHtml(file.name)}')">删除</button>
+                    <button onclick="event.stopPropagation(); deleteFile('${file.name.replace(/'/g, "\\'")}')">删除</button>
                 </div>
             </div>
         `).join('');

@@ -457,30 +457,47 @@ async def delete_file(filename: str, request: Request = None):
     """删除文件"""
     client_ip = request.client.host if request else "unknown"
 
-    # URL解码
-    import urllib.parse
-    filename = urllib.parse.unquote(filename)
+    # FastAPI 已经自动解码了 URL 参数，不要重复解码
+    # 否则会导致双重解码破坏中文字符
 
     filename = filename.replace("..", "").replace("/", "").replace("\\", "")
     file_path = DOWNLOADS_DIR / filename
 
     logger.info(f"[{filename}] 删除文件请求, 客户端: {client_ip}")
 
-    # 如果精确匹配找不到，尝试模糊匹配（处理省略号编码问题）
+    # 如果精确匹配找不到，尝试模糊匹配（处理省略号、编码问题等）
     if not file_path.exists():
-        # 尝试不同的点号变体
-        filename_variants = [
-            filename,
-            filename.replace('...', '…'),  # 英文省略号 -> Unicode
-            filename.replace('…', '...'),  # Unicode -> 英文
-        ]
-        for variant in filename_variants:
-            test_path = DOWNLOADS_DIR / variant
-            if test_path.exists():
-                file_path = test_path
-                filename = variant
-                logger.info(f"[{filename}] 模糊匹配成功")
+        # 获取所有文件，尝试匹配
+        all_files = list(DOWNLOADS_DIR.glob("*.mp3")) + list(DOWNLOADS_DIR.glob("*.m4a"))
+        matched_file = None
+
+        # 尝试多种匹配方式
+        for f in all_files:
+            # 1. 精确匹配
+            if f.name == filename:
+                matched_file = f
                 break
+            # 2. 只比较名称部分（不含扩展名）
+            if f.stem == Path(filename).stem:
+                matched_file = f
+                logger.info(f"[{filename}] 模糊匹配成功 (stem): {f.name}")
+                break
+            # 3. 名称包含关系
+            if filename in f.name or f.name in filename:
+                matched_file = f
+                logger.info(f"[{filename}] 模糊匹配成功 (contains): {f.name}")
+                break
+            # 4. 处理特殊字符变体
+            stem = Path(filename).stem
+            if stem in f.stem or f.stem in stem:
+                matched_file = f
+                logger.info(f"[{filename}] 模糊匹配成功 (stem contains): {f.name}")
+                break
+
+        if matched_file:
+            file_path = matched_file
+            filename = matched_file.name
+            logger.info(f"[{filename}] 使用匹配的文件路径: {file_path}")
 
     if not file_path.exists():
         logger.warning(f"[{filename}] 删除失败: 文件不存在")
