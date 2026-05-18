@@ -391,7 +391,10 @@ async def download_file(filename: str, request: Request = None):
     range_header = request.headers.get("Range", None)
 
     # 安全检查：防止路径遍历攻击
-    filename = filename.replace("..", "").replace("/", "").replace("\\", "")
+    # 只替换真正的路径遍历 ..（后面跟 / 或 \），保留正常的文件名
+    import re
+    filename = re.sub(r'\.\.[/\\]', '', filename)  # 移除 ../ 或 ..\
+    filename = filename.replace("/", "").replace("\\", "")
 
     file_path = DOWNLOADS_DIR / filename
 
@@ -459,8 +462,10 @@ async def delete_file(filename: str, request: Request = None):
 
     # FastAPI 已经自动解码了 URL 参数，不要重复解码
     # 否则会导致双重解码破坏中文字符
-
-    filename = filename.replace("..", "").replace("/", "").replace("\\", "")
+    # 安全检查：防止路径遍历攻击，只移除真正的 ../
+    import re
+    filename = re.sub(r'\.\.[/\\]', '', filename)
+    filename = filename.replace("/", "").replace("\\", "")
     file_path = DOWNLOADS_DIR / filename
 
     logger.info(f"[{filename}] 删除文件请求, 客户端: {client_ip}")

@@ -235,6 +235,15 @@ class Downloader:
                     else:
                         logger.warning(f"[{task_id}] ⚠️ 封面文件未找到: {thumbnail_path}")
                     task_manager.update_task(task_id, message="正在添加封面...")
+                except Exception as e:
+                    logger.warning(f"[{task_id}] 封面下载失败: {e}")
+                finally:
+                    # 清理临时封面文件
+                    if 'temp_thumbnail' in locals() and temp_thumbnail.exists():
+                        try:
+                            temp_thumbnail.unlink()
+                        except:
+                            pass
 
             # 使用 FFmpeg 转换为 MP3（不再嵌入封面，封面单独保存在 covers 目录）
             logger.info(f"[{task_id}] ========== 开始转换MP3 ==========")
