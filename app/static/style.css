@@ -932,7 +932,10 @@ header h1 {
 }
 
 .playlist-detail.expanded {
-    max-height: 500px;
+    max-height: none;
+    height: auto;
+    max-height: 60vh;
+    overflow-y: auto;
     opacity: 1;
     margin-top: var(--space-sm);
 }
